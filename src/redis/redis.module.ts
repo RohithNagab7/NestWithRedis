@@ -11,8 +11,9 @@ import { RedisService } from './redis.service.js';
       provide: REDIS_CLIENT,
       useFactory: () => {
         const redis: RedisClient = new Redis.default({
-          host: 'localhost',
-          port: 6379,
+          host: process.env.REDIS_HOST || 'redis',
+          port: Number(process.env.REDIS_PORT) || 6379,
+          password: process.env.REDIS_PASSWORD || undefined,
           maxRetriesPerRequest: 3,
           enableReadyCheck: true,
         });

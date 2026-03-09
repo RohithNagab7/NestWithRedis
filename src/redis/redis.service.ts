@@ -47,6 +47,10 @@ export class RedisService implements OnModuleDestroy {
     await this.redis.flushall();
   }
 
+  getClient(): RedisClient {
+    return this.redis;
+  }
+
   async onModuleDestroy() {
     await this.redis.quit();
   }
