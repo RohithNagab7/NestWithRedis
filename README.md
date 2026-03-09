@@ -1,98 +1,339 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# NestJS Backend Architecture with Redis, Custom Rate Limiting and Docker
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This project demonstrates a **production-style backend architecture** built using **NestJS**, **PostgreSQL**, **Prisma ORM**, **Redis**, and **Docker**.
 
-## Description
+The goal of the project is not CRUD complexity but **infrastructure design and backend engineering patterns**, including:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+* Custom **rate limiting algorithms**
+* **Redis caching layer**
+* **Containerized deployment**
+* **Database migrations**
+* **Network-isolated services**
 
-## Project setup
+The system runs entirely using **Docker Compose**, orchestrating the API server, Redis, and PostgreSQL.
 
-```bash
-$ npm install
+---
+
+# Architecture
+
+```
+Client
+  │
+  ▼
+NestJS API
+  │
+  ├── Redis
+  │     ├── Cache
+  │     └── Rate Limiter
+  │
+  ▼
+PostgreSQL (Prisma ORM)
 ```
 
-## Compile and run the project
+Services are isolated within a **Docker bridge network**.
 
-```bash
-# development
-$ npm run start
+---
 
-# watch mode
-$ npm run start:dev
+# Tech Stack
 
-# production mode
-$ npm run start:prod
+| Component             | Technology        |
+| --------------------- | ----------------- |
+| Backend Framework     | NestJS            |
+| Language              | TypeScript        |
+| Database              | PostgreSQL        |
+| ORM                   | Prisma            |
+| Cache Layer           | Redis             |
+| Rate Limiting         | Custom algorithms |
+| Containerization      | Docker            |
+| Service Orchestration | Docker Compose    |
+
+---
+
+# Key Backend Features
+
+## 1. Redis Integration via ioredis
+
+This project intentionally **avoids NestJS CacheManager** and instead uses **direct Redis integration via `ioredis`**.
+
+### Why avoid CacheManager?
+
+The built-in cache manager abstraction has limitations:
+
+* Limited control over Redis primitives
+* Harder to implement advanced patterns
+* Less predictable performance under load
+* Poor support for custom algorithms (rate limiting)
+
+Using **ioredis** provides:
+
+```
+direct access to Redis commands
+better connection handling
+pipeline support
+cluster compatibility
+fine-grained performance tuning
 ```
 
-## Run tests
+Redis is used for:
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```
+response caching
+rate limiting counters
+sliding window tracking
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+# Redis Service Layer
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+A dedicated Redis service wraps all Redis operations.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+Example responsibilities:
+
+```
+GET / SET cache entries
+pattern-based key deletion
+TTL management
+connection lifecycle management
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The Redis client is injected into NestJS modules using a provider pattern.
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+# Rate Limiting Architecture
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Two different algorithms are implemented to demonstrate **different traffic protection strategies**.
 
-## Support
+```
+Global rate limiting
+API-level rate limiting
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+---
 
-## Stay in touch
+# Fixed Window Rate Limiter (Global)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+The **Fixed Window algorithm** is implemented as a **global NestJS guard**.
 
-## License
+This protects the entire backend from abusive clients.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Advantages
+
+```
+extremely fast
+minimal Redis operations
+low memory footprint
+good for global API protection
+```
+
+### Limitations
+
+```
+burst traffic allowed at window boundaries
+less precise enforcement
+```
+
+---
+
+# Sliding Window Rate Limiter (Endpoint Level)
+
+For sensitive endpoints, the project implements a **Sliding Window algorithm** using Redis sorted sets.
+
+### Advantages
+
+```
+precise request limiting
+no burst edge cases
+better fairness across time windows
+```
+
+### Trade-offs
+
+```
+higher memory usage
+slightly slower than fixed window
+```
+
+---
+
+# Rate Limiting Decorator
+
+API endpoints can define custom limits using a decorator.
+
+Example:
+
+```
+@RateLimit(5, 60)
+POST /auth/login
+```
+
+This overrides default values defined in the guard.
+
+The guard retrieves configuration via NestJS **Reflector metadata**.
+
+---
+
+# Prisma ORM Integration
+
+Database access is implemented using **Prisma ORM**.
+
+Benefits:
+
+```
+type-safe queries
+migration system
+generated client
+clean schema modeling
+```
+
+Migrations are automatically applied during container startup.
+
+```
+prisma migrate deploy
+```
+
+This ensures schema consistency across environments.
+
+---
+
+# Dockerized Deployment
+
+The system uses **multi-stage Docker builds** for optimized images.
+
+### Build Stage
+
+```
+install dependencies
+compile NestJS application
+```
+
+### Production Stage
+
+```
+install production dependencies only
+copy compiled output
+run database migrations
+start application
+```
+
+---
+
+# Docker Compose Services
+
+Three services are orchestrated:
+
+```
+app
+postgres
+redis
+```
+
+### API Service
+
+Runs the NestJS backend.
+
+Startup sequence:
+
+```
+run migrations
+start server
+```
+
+### PostgreSQL Service
+
+Provides persistent relational storage.
+
+Features:
+
+```
+health checks
+volume persistence
+isolated container network
+```
+
+### Redis Service
+
+Provides:
+
+```
+in-memory caching
+rate limiting storage
+append-only persistence
+```
+
+---
+
+# Container Networking
+
+All services communicate via an internal Docker network.
+
+Example internal hosts:
+
+```
+postgres:5432
+redis:6379
+```
+
+No container communicates using localhost.
+
+---
+
+# Running the Project
+
+## Build and Start Services
+
+```
+docker compose up --build
+```
+
+This will start:
+
+```
+NestJS API
+PostgreSQL database
+Redis cache
+```
+
+---
+
+# Access the API
+
+```
+http://localhost:3000
+```
+
+---
+
+# Performance Considerations
+
+Redis operations used in rate limiting are **O(log n)** or **O(1)** depending on the algorithm.
+
+The system is designed to:
+
+```
+minimize Redis round trips
+use pipelined commands
+avoid distributed locks
+```
+
+This ensures high throughput even under heavy API load.
+
+
+---
+
+# Summary
+
+This project demonstrates backend engineering patterns including:
+
+```
+custom rate limiting algorithms
+redis-based caching
+dockerized infrastructure
+database migrations
+modular NestJS architecture
+```
+
+It focuses on **system design and backend infrastructure**, not just API endpoints.
